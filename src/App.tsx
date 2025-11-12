@@ -139,12 +139,14 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault();
+        // Don't start game if game is over
+        if (gameOver) return;
         setKeysPressed(prev => ({ ...prev, [e.key]: true }));
         if (!gameStarted) setGameStarted(true);
       }
       
       // Toggle pause on Enter when game is active
-      if (e.key === 'Enter' && gameStarted && !gameWon) {
+      if (e.key === 'Enter' && gameStarted && !gameWon && !gameOver) {
         e.preventDefault();
         setGamePaused(prev => !prev);
       }
@@ -196,7 +198,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [gameStarted, gameWon]);
+  }, [gameStarted, gameWon, gameOver]);
 
   // Game loop
   useEffect(() => {
@@ -375,11 +377,15 @@ export default function App() {
     if (allBlocksDestroyed && gameStarted && !gameWon) {
       setGameWon(true);
       setGameStarted(false);
-      if (score > highScore) {
-        setHighScore(score);
-      }
     }
-  }, [blocks, gameStarted, gameWon, score, highScore]);
+  }, [blocks, gameStarted, gameWon]);
+  
+  // Update high score whenever score increases
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+    }
+  }, [score, highScore]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-900">
