@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import Group3 from './imports/Group3';
 
 interface Ball {
   x: number;
@@ -24,6 +26,14 @@ interface Block {
   color: string;
   row: number;
   col: number;
+  hit: boolean;
+}
+
+interface Particle {
+  id: string;
+  x: number;
+  y: number;
+  timestamp: number;
 }
 
 const GAME_WIDTH = 920;
@@ -82,7 +92,8 @@ const createInitialBlocks = (): Block[] => {
         visible: true,
         color: row.color,
         row: rowIndex,
-        col: colIndex
+        col: colIndex,
+        hit: false
       });
     });
   });
@@ -113,6 +124,7 @@ export default function App() {
   const [ballsLeft, setBallsLeft] = useState(INITIAL_BALLS);
   const [gameOver, setGameOver] = useState(false);
   const [lastBonusThreshold, setLastBonusThreshold] = useState(0);
+  const [particles, setParticles] = useState<Particle[]>([]);
 
   // Handle keyboard input
   useEffect(() => {
@@ -141,6 +153,7 @@ export default function App() {
         setBallsLeft(INITIAL_BALLS);
         setGameOver(false);
         setLastBonusThreshold(0);
+        setParticles([]);
       }
       
       // Reset game on Enter when game over
@@ -155,6 +168,7 @@ export default function App() {
         setBallsLeft(INITIAL_BALLS);
         setGameOver(false);
         setLastBonusThreshold(0);
+        setParticles([]);
       }
     };
 
@@ -272,9 +286,24 @@ export default function App() {
             // Remove the block
             setBlocks(prevBlocks => 
               prevBlocks.map(b => 
-                b === block ? { ...b, visible: false } : b
+                b === block ? { ...b, visible: false, hit: true } : b
               )
             );
+            
+            // Create particle at block center
+            const particleId = `particle-${Date.now()}-${Math.random()}`;
+            setParticles(prev => [...prev, {
+              id: particleId,
+              x: block.x + block.width / 2,
+              y: block.y + block.height / 2,
+              timestamp: Date.now()
+            }]);
+            
+            // Remove particle after 250ms
+            setTimeout(() => {
+              setParticles(prev => prev.filter(p => p.id !== particleId));
+            }, 250);
+            
             setScore(prevScore => prevScore + POINTS_PER_BLOCK);
             if (score >= lastBonusThreshold + EXTRA_BALL_THRESHOLD) {
               setBallsLeft(prevBalls => prevBalls + 1);
@@ -338,9 +367,12 @@ export default function App() {
         <div className="absolute h-[228px] left-0 top-[41px] w-[920px]" data-name="blocks">
           {blocks.map((block, index) => (
             block.visible && (
-              <div
+              <motion.div
                 key={index}
                 className="absolute"
+                initial={{ scale: 1 }}
+                animate={block.hit ? { scale: 0 } : { scale: 1 }}
+                transition={{ duration: 0.2 }}
                 style={{
                   left: block.x,
                   top: block.y - 41,
@@ -351,10 +383,29 @@ export default function App() {
                 data-name="block"
               >
                 <div aria-hidden="true" className="absolute border border-solid border-white inset-0 pointer-events-none" />
-              </div>
+              </motion.div>
             )
           ))}
         </div>
+        
+        {/* Particles */}
+        {particles.map(particle => (
+          <motion.div
+            key={particle.id}
+            className="absolute pointer-events-none"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              left: particle.x - 22,
+              top: particle.y - 20,
+              width: 44,
+              height: 41
+            }}
+          >
+            <Group3 />
+          </motion.div>
+        ))}
 
         {/* Ball */}
         <div
@@ -422,9 +473,11 @@ export default function App() {
         )}
 
         {/* Score and Balls Left */}
-        <div className="absolute top-2 left-0 w-full flex justify-center gap-8 text-black">
-          <div>Score: {score}</div>
-          <div>High Score: {highScore}</div>
+        <div className="absolute top-2 left-0 w-full flex justify-between px-4 text-black">
+          <div className="flex gap-8">
+            <div>SCORE: {score}</div>
+            <div>HIGH SCORE: {highScore}</div>
+          </div>
           <div>x {ballsLeft}</div>
         </div>
       </div>
