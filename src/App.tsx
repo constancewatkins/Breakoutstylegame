@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import Group3 from './imports/Group3';
+import Group4 from './imports/Group4-28-44';
 
 interface Ball {
   x: number;
@@ -33,6 +34,12 @@ interface Particle {
   id: string;
   x: number;
   y: number;
+  timestamp: number;
+}
+
+interface BottomParticle {
+  id: string;
+  x: number;
   timestamp: number;
 }
 
@@ -125,6 +132,7 @@ export default function App() {
   const [gameOver, setGameOver] = useState(false);
   const [lastBonusThreshold, setLastBonusThreshold] = useState(0);
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [bottomParticles, setBottomParticles] = useState<BottomParticle[]>([]);
 
   // Handle keyboard input
   useEffect(() => {
@@ -154,6 +162,7 @@ export default function App() {
         setGameOver(false);
         setLastBonusThreshold(0);
         setParticles([]);
+        setBottomParticles([]);
       }
       
       // Reset game on Enter when game over
@@ -169,6 +178,7 @@ export default function App() {
         setGameOver(false);
         setLastBonusThreshold(0);
         setParticles([]);
+        setBottomParticles([]);
       }
     };
 
@@ -226,6 +236,20 @@ export default function App() {
 
         // Bottom wall (reset ball and pause)
         if (newY + prev.radius >= GAME_HEIGHT) {
+          // Create bottom particle at ball's x position
+          const bottomParticleId = `bottom-particle-${Date.now()}-${Math.random()}`;
+          const ballX = prev.x; // Capture ball's x position
+          setBottomParticles(prevParticles => [...prevParticles, {
+            id: bottomParticleId,
+            x: ballX,
+            timestamp: Date.now()
+          }]);
+          
+          // Remove particle after 250ms
+          setTimeout(() => {
+            setBottomParticles(prevParticles => prevParticles.filter(p => p.id !== bottomParticleId));
+          }, 250);
+          
           setGameStarted(false);
           setBallsLeft(prevBalls => prevBalls - 1);
           if (ballsLeft <= 1) {
@@ -404,6 +428,25 @@ export default function App() {
             }}
           >
             <Group3 />
+          </motion.div>
+        ))}
+        
+        {/* Bottom Particles */}
+        {bottomParticles.map(particle => (
+          <motion.div
+            key={particle.id}
+            className="absolute pointer-events-none"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              left: particle.x - 32.5,
+              bottom: 0,
+              width: 65,
+              height: 44
+            }}
+          >
+            <Group4 />
           </motion.div>
         ))}
 
